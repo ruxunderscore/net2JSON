@@ -1,5 +1,5 @@
 # net2JSON
-Checks for pingable clients on 1 or more subnets, then checks if they have web servers running on port 80 or 443. Then, the results are recorded to a unix timestamped json file for easy parsing.  
+Checks for pingable clients on 1 or more subnets, then checks if they have open ports between 1..1024. Then, the results are recorded to a unix timestamped json file for easy parsing.  
 
 ## Prerequisites
 - python3
