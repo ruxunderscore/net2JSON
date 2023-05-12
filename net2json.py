@@ -96,5 +96,4 @@ filename = f"live_systems_{int(time.time())}.json"
 with open(filename, "w") as f:
     json.dump(live_systems, f, indent=4)
 
-
 print(f"Live systems data written to {filename}")
