@@ -11,5 +11,5 @@ Checks for pingable clients on 1 or more subnets, then checks if they have web s
 - Find your new json file of the scanned network in the working project directory. 
 - Now you have a easily parsable json file you can use for anything!
 
-## Ideas?
+## Ideas
 If you would like to see something implemented in this script let me know in an issue or create a pull request! Feel free to fork it for your own projects as well! This project uses GNU GPL v3.0!
