@@ -23,14 +23,14 @@
     # You should have received a copy of the GNU General Public License
     # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 import json
 import subprocess
 import socket as s
 import time
 import ipaddress
 
-def checkPorts():
+# Iterates through common ports (1-1024) for each live system to get live ports. 
+def checkPorts(ip):
     ports = []
     for port in range(1,1024):
         try:
@@ -40,17 +40,10 @@ def checkPorts():
             ports.append(port)
         except s.error:
             print(f"Port {port} is closed.")
+    return ports
 
-# Load the networks from the networks.json file
-print("Loading network configuration from networks.json...")
-with open("networks.json", "r") as f:
-    networks = json.load(f)
-
-# Create an empty list to store the live systems with web servers
-live_systems = []
-
-# Loop through each network
-for network in networks:
+# Iterates through each subnet's IP addresses.
+def scanNetwork(network):
     subnet = network["subnet"]
     print(f"Scanning subnet {subnet} for live systems...")
     
@@ -69,6 +62,7 @@ for network in networks:
             
             ports = []
 
+            # Check for hostname.
             try:
                 hostname = s.gethostbyaddr(ip)[0]
                 print(f"Hostname for {ip} is {hostname}.")
@@ -76,12 +70,24 @@ for network in networks:
                 hostname = "Unknown"
                 print(f"Could not resolve hostname for {ip}.")
 
-            open_ports = checkPorts()
-            ports.append(open_ports)
+            # Append live ports with checkPorts().    
+            ports = checkPorts(ip)
             
             # Add the data to the list
             data = {"ip": ip, "hostname": hostname, "ports_open": ports}
             live_systems.append(data)
+
+# Load the networks from the networks.json file
+print("Loading network configuration from networks.json...")
+with open("networks.json", "r") as f:
+    networks = json.load(f)
+
+# Create an empty list to store the live systems with web servers
+live_systems = []
+
+# Loop through each network to ge information for live_systems_<unix-time>.json file.
+for network in networks:
+    scanNetwork(network)
 
 # Generate the file name with Unix time
 filename = f"live_systems_{int(time.time())}.json"
