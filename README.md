@@ -1,5 +1,5 @@
 # net2JSON
-Checks for pingable clients on 1 or more configurable subnets, then checks if they have open ports on the configured port range. Then, the results are recorded to a unix timestamped json file for easy parsing.
+Checks for pingable clients on 1 or more configurable subnets, then checks if they have open ports on the configured port range. Then, the results are recorded to a UNIX timestamped JSON file for easy parsing.
 
 ## Prerequisites
 - python3
