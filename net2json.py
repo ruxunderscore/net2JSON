@@ -29,17 +29,20 @@ import socket as s
 import time
 import ipaddress
 
-# Iterates through common ports (1-1024) for each live system to get live ports. 
-def check_ports(ip, delay = 0.5):
+# Iterates through the configured port range for each live system to get live ports. 
+def check_ports(ip, port_range):
     open_ports = []
-    for port in range(1,1025):
+    start_port, end_port = port_range
+    for port in range(start_port, end_port):
+        print(f"Scanning port ({port:>5})...", end='\r', flush = True)
         sock = s.socket(s.AF_INET, s.SOCK_STREAM)
         sock.settimeout(0.1)
         result = sock.connect_ex((ip, port))
         if result == 0:
+            print(f"Port ({port:>5}) is open...")
             open_ports.append(port)
         sock.close()
-        time.sleep(delay)
+        time.sleep(0.5)
     return open_ports
 
 def is_host_alive(ip):
@@ -55,6 +58,8 @@ def get_hostname(ip):
 # Iterates through each subnet's IP addresses.
 def scan_network(network):
     subnet = network["subnet"]
+    port_range = network.get("port_range", [1, 1023]) # Default port range is 1-1023 Well-Known ports.
+    port_range[1] += 1
     print(f"Scanning subnet {subnet} for live systems...")
     
     # Convert the subnet mask to a network object
@@ -68,11 +73,13 @@ def scan_network(network):
         # Ping the IP address to see if it's live
         print(f"Pinging {ip} to check if it's live...")
         if is_host_alive(ip):
-            print(f"{ip} is live!")
+            print(f"{ip} is live with hostname... ", end='')
             hostname = get_hostname(ip)
-            print(f"Hostname for {ip}: {hostname}")
-            ports = check_ports(ip)
-            print(f"Open ports for {ip}: {ports}")
+            print(f" {hostname}!")
+            # print(f"Hostname for {ip}: {hostname}")
+            print(f"Checking for open ports on {ip} within the following range: {port_range[0]}-{port_range[1]-1}")
+            ports = check_ports(ip, port_range)
+            # print(f"Open ports for {ip}: {ports}")
             
             # Add the data to the list
             data = {"id": id, "ip": ip, "hostname": hostname, "ports_open": ports}
