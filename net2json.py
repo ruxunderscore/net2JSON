@@ -1,15 +1,15 @@
 #########################################################################################################
 #                                                       |  _   _      _   ____     _ ____   ___  _   _  #
 #                                                       | | \ | | ___| |_|___ \   | / ___| / _ \| \ | | #
-#       Author        : Jonathan Rux                    | |  \| |/ _ | __| __) _  | \___ \| | | |  \| | #
+#       Author        : Rux aka. RuxUnderscore          | |  \| |/ _ | __| __) _  | \___ \| | | |  \| | #
 #       Email         : jonathan.e.rux@underscore.com   | | |\  |  __| |_ / __| |_| |___) | |_| | |\  | #
-#       Version       : 1.1                             | |_| \_|\___|\__|_____\___/|____/ \___/|_| \_| #
+#       Version       : 2.0                             | |_| \_|\___|\__|_____\___/|____/ \___/|_| \_| #
 #       OS Support    : ALL                             |                                               #
 #                                                       |           Network to JSON mapping.            #
 #                                                       |                                               #
 #########################################################################################################
 
-    # Copyright (C) 2023  RuxUnderscore
+    # Copyright (C) 2024  RuxUnderscore
     # This program is free software: you can redistribute it and/or modify
     # it under the terms of the GNU General Public License as published by
     # the Free Software Foundation, either version 3 of the License, or
@@ -30,20 +30,30 @@ import time
 import ipaddress
 
 # Iterates through common ports (1-1024) for each live system to get live ports. 
-def checkPorts(ip):
-    ports = []
-    for port in range(1,1024):
-        try:
-            address = (ip, int(port))
-            s.socket().connect(address)
-            print(f"Port {port} is open.")
-            ports.append(port)
-        except s.error:
-            print(f"Port {port} is closed.")
-    return ports
+def check_ports(ip, delay = 0.5):
+    open_ports = []
+    for port in range(1,1025):
+        sock = s.socket(s.AF_INET, s.SOCK_STREAM)
+        sock.settimeout(0.1)
+        result = sock.connect_ex((ip, port))
+        if result == 0:
+            open_ports.append(port)
+        sock.close()
+        time.sleep(delay)
+    return open_ports
+
+def is_host_alive(ip):
+    response = subprocess.run(["ping", "-c", "1", "-W", "500", ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return response
+
+def get_hostname(ip):
+    try:
+        return s.gethostbyaddr(ip)[0]
+    except s.herror:
+        return "Unknown"
 
 # Iterates through each subnet's IP addresses.
-def scanNetwork(network):
+def scan_network(network):
     subnet = network["subnet"]
     print(f"Scanning subnet {subnet} for live systems...")
     
@@ -51,31 +61,24 @@ def scanNetwork(network):
     network_obj = ipaddress.ip_network(subnet, strict=False)
     
     # Loop through each IP address in the subnet range
+    id = 0
+    live_systems = []
     for ip in network_obj.hosts():
         ip = str(ip)
-        
         # Ping the IP address to see if it's live
         print(f"Pinging {ip} to check if it's live...")
-        response = subprocess.Popen(["ping", "-n", "1", "-w", "500", ip], stdout=subprocess.PIPE).stdout.read()
-        if "Reply from" in str(response):
+        if is_host_alive(ip):
             print(f"{ip} is live!")
-            
-            ports = []
-
-            # Check for hostname.
-            try:
-                hostname = s.gethostbyaddr(ip)[0]
-                print(f"Hostname for {ip} is {hostname}.")
-            except:
-                hostname = "Unknown"
-                print(f"Could not resolve hostname for {ip}.")
-
-            # Append live ports with checkPorts().    
-            ports = checkPorts(ip)
+            hostname = get_hostname(ip)
+            print(f"Hostname for {ip}: {hostname}")
+            ports = check_ports(ip)
+            print(f"Open ports for {ip}: {ports}")
             
             # Add the data to the list
-            data = {"ip": ip, "hostname": hostname, "ports_open": ports}
+            data = {"id": id, "ip": ip, "hostname": hostname, "ports_open": ports}
+            id += 1
             live_systems.append(data)
+    return live_systems
 
 # Load the networks from the networks.json file
 print("Loading network configuration from networks.json...")
@@ -83,17 +86,19 @@ with open("networks.json", "r") as f:
     networks = json.load(f)
 
 # Create an empty list to store the live systems with web servers
-live_systems = []
+all_live_systems = []
 
 # Loop through each network to ge information for live_systems_<unix-time>.json file.
 for network in networks:
-    scanNetwork(network)
+    live_systems = scan_network(network)
+    all_live_systems.extend(live_systems)
 
+# print(f"Live Systems Data:\n{all_live_systems}")
 # Generate the file name with Unix time
 filename = f"live_systems_{int(time.time())}.json"
 
 # Write the live systems list to the output file
 with open(filename, "w") as f:
-    json.dump(live_systems, f, indent=4)
+    json.dump(all_live_systems, f, separators=(',', ':'))
 
 print(f"Live systems data written to {filename}")
